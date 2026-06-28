@@ -111,12 +111,22 @@ export default function HomePage() {
       })
 
       if (data.searchWords.length === 0) {
-        setError('No English word found. Try a different spelling.')
+        setError(`"${trimmed}" was not found in the dictionary.`)
         return
       }
 
-      // 2. Get translations to target language for each match
-      const batch = data.searchWords.slice(0, 5)
+      // Filter to exact matches only
+      const exactMatches = data.searchWords.filter(
+        (w) => w.text.toLowerCase() === trimmed.toLowerCase()
+      )
+
+      if (exactMatches.length === 0) {
+        setError(`"${trimmed}" was not found in the dictionary.`)
+        return
+      }
+
+      // 2. Get translations to target language for each exact match
+      const batch = exactMatches.slice(0, 5)
       const langMap = new Map(languages.map((l) => [l.id, l]))
       const tResults: TransResult[] = []
 
@@ -144,7 +154,7 @@ export default function HomePage() {
 
       setTransResults(tResults)
       if (tResults.length === 0) {
-        setError('No translation found for this word.')
+        setError(`No translation for "${trimmed}" in ${targetLang?.name || transTarget}.`)
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Translation failed')
