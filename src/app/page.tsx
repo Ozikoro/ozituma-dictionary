@@ -22,25 +22,29 @@ export default function HomePage() {
 
   // ── Translate state ──
   const [transWord, setTransWord] = useState('')
-  const [transTarget, setTransTarget] = useState('')
+  const [transTargets, setTransTargets] = useState<Set<string>>(new Set())
   const [transResults, setTransResults] = useState<TransResult[]>([])
   const [translating, setTranslating] = useState(false)
 
   type WordWithLang = Word & { langName?: string; langCode?: string }
-  type TransResult = { source: string; target: string; meaning?: string; example?: string }
+  type TransResult = { source: string; target: string; lang: string; meaning?: string; example?: string }
+
+  const nonEnglishLangs = languages.filter((l) => l.code !== 'en')
 
   // Load languages on mount
   useEffect(() => {
     graphql<{ languages: Language[] }>(LANGUAGES_QUERY)
       .then((data) => {
         setLanguages(data.languages)
-        // Default translate target to first non-English language
-        const nonEn = data.languages.find((l) => l.code !== 'en')
-        if (nonEn) setTransTarget(nonEn.code)
+        // Default: select all non-English languages
+        setTransTargets(new Set(data.languages.filter((l) => l.code !== 'en').map((l) => l.code)))
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
+
+  const langMap = new Map(languages.map((l) => [l.code, l]))
+  const langMapById = new Map(languages.map((l) => [l.id, l]))
 
   // ── Search handler ──
   const handleSearch = useCallback(async () => {
@@ -57,11 +61,11 @@ export default function HomePage() {
         langCode: selectedLang || null,
       })
 
-      const langMap = new Map(languages.map((l) => [l.id, l]))
+      const lMap = new Map(languages.map((l) => [l.id, l]))
       const enriched = data.searchWords.map((w) => ({
         ...w,
-        langName: langMap.get(w.languageId)?.name,
-        langCode: langMap.get(w.languageId)?.code,
+        langName: lMap.get(w.languageId)?.name,
+        langCode: lMap.get(w.languageId)?.code,
       }))
 
       setResults(enriched)
@@ -97,14 +101,13 @@ export default function HomePage() {
   // ── Translate handler ──
   const handleTranslate = useCallback(async () => {
     const trimmed = transWord.trim()
-    if (!trimmed || !transTarget) return
+    if (!trimmed || transTargets.size === 0) return
 
     setTranslating(true)
     setError(null)
     setTransResults([])
 
     try {
-      // 1. Search English word
       const data = await graphql<{ searchWords: Word[] }>(SEARCH_WORDS_QUERY, {
         query: trimmed,
         langCode: 'en',
@@ -115,7 +118,6 @@ export default function HomePage() {
         return
       }
 
-      // Filter to exact matches only
       const exactMatches = data.searchWords.filter(
         (w) => w.text.toLowerCase() === trimmed.toLowerCase()
       )
@@ -125,25 +127,25 @@ export default function HomePage() {
         return
       }
 
-      // 2. Get translations to target language for each exact match
+      const targetCodes = [...transTargets]
       const batch = exactMatches.slice(0, 5)
-      const langMap = new Map(languages.map((l) => [l.id, l]))
       const tResults: TransResult[] = []
 
       await Promise.allSettled(
         batch.map(async (w) => {
           const tData = await graphql<{ compareWord: Translation[] }>(COMPARE_WORD_QUERY, {
             wordId: w.id,
-            targetLangs: [transTarget],
+            targetLangs: targetCodes,
           })
 
-          // Fetch target word texts
           await Promise.allSettled(
             tData.compareWord.map(async (t) => {
               const twData = await graphql<{ word: Word | null }>(WORD_QUERY, { id: t.targetWordId })
+              const targetLang = twData.word ? langMapById.get(twData.word.languageId) : null
               tResults.push({
                 source: w.text,
                 target: twData.word?.text || '—',
+                lang: targetLang ? `${targetLang.name} (${targetLang.code})` : '—',
                 meaning: t.meaning || undefined,
                 example: t.exampleUsage || undefined,
               })
@@ -152,18 +154,45 @@ export default function HomePage() {
         })
       )
 
+      // Sort by language name
+      tResults.sort((a, b) => a.lang.localeCompare(b.lang))
       setTransResults(tResults)
       if (tResults.length === 0) {
-        setError(`No translation for "${trimmed}" in ${targetLang?.name || transTarget}.`)
+        setError(`No translations found for "${trimmed}" in the selected languages.`)
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Translation failed')
     } finally {
       setTranslating(false)
     }
-  }, [transWord, transTarget, languages])
+  }, [transWord, transTargets, languages])
 
-  const targetLang = languages.find((l) => l.code === transTarget)
+  const toggleTransLang = (code: string) => {
+    setTransTargets((prev) => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
+  }
+
+  const selectAllLangs = () => {
+    setTransTargets(new Set(nonEnglishLangs.map((l) => l.code)))
+  }
+
+  const selectNoLangs = () => {
+    setTransTargets(new Set())
+  }
+
+  // Group translate results by language
+  const groupedByLang = (): Map<string, TransResult[]> => {
+    const grouped = new Map<string, TransResult[]>()
+    for (const r of transResults) {
+      if (!grouped.has(r.lang)) grouped.set(r.lang, [])
+      grouped.get(r.lang)!.push(r)
+    }
+    return grouped
+  }
 
   const groupedTranslations = (wordId: string): Map<string, Translation[]> => {
     const tList = translations.get(wordId) || []
@@ -308,26 +337,34 @@ export default function HomePage() {
                 autoFocus
               />
             </div>
-            <div className="translate-row">
-              <div className="translate-picker">
-                <label className="translate-label">to</label>
-                <select
-                  className="translate-select"
-                  value={transTarget}
-                  onChange={(e) => setTransTarget(e.target.value)}
-                >
-                  {languages
-                    .filter((l) => l.code !== 'en')
-                    .map((l) => (
-                      <option key={l.code} value={l.code}>
-                        {l.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <button className="search-btn" onClick={handleTranslate} disabled={translating || !transWord.trim() || !transTarget}>
+            <div className="translate-btn-row">
+              <button className="search-btn" onClick={handleTranslate} disabled={translating || !transWord.trim() || transTargets.size === 0} style={{ flex: 1 }}>
                 {translating ? 'Translating…' : 'Translate'}
               </button>
+            </div>
+          </div>
+
+          <div className="lang-section">
+            <div className="lang-label">
+              Translate to
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                {' · '}
+                <button className="picker-btn" onClick={selectAllLangs}>All</button>
+                {' / '}
+                <button className="picker-btn" onClick={selectNoLangs}>None</button>
+                {' · '} {transTargets.size} selected
+              </span>
+            </div>
+            <div className="lang-chips">
+              {nonEnglishLangs.map((lang) => (
+                <button
+                  key={lang.code}
+                  className={`lang-chip ${transTargets.has(lang.code) ? 'active' : ''}`}
+                  onClick={() => toggleTransLang(lang.code)}
+                >
+                  {lang.name}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -335,32 +372,38 @@ export default function HomePage() {
 
           {translating && (
             <div className="results">
-              {[1, 2].map((i) => <div key={i} className="skeleton" style={{ height: '4.5rem' }} />)}
+              {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '4.5rem' }} />)}
             </div>
           )}
 
           {!translating && transResults.length === 0 && !error && (
             <div className="no-results">
               <div className="no-results-icon">🌐</div>
-              <p>Type an English word and select a target language,<br />then press <strong>Translate</strong></p>
+              <p>Type an English word, select target languages,<br />then press <strong>Translate</strong></p>
             </div>
           )}
 
           {transResults.length > 0 && !translating && (
             <div className="results">
               <div className="trans-header">
-                <span className="trans-label-results">Results for &ldquo;{transWord}&rdquo;</span>
-                <span className="word-lang-badge">{targetLang?.name}</span>
+                <span className="trans-label-results">
+                  Results for &ldquo;{transWord}&rdquo; ({transResults.length} translation{transResults.length > 1 ? 's' : ''})
+                </span>
               </div>
-              {transResults.map((r, i) => (
-                <div key={i} className="trans-card">
-                  <div className="trans-pair">
-                    <span className="trans-source">{r.source}</span>
-                    <span className="trans-arrow">→</span>
-                    <span className="trans-target-word">{r.target}</span>
-                  </div>
-                  {r.meaning && <div className="trans-meaning">{r.meaning}</div>}
-                  {r.example && <div className="trans-example">&ldquo;{r.example}&rdquo;</div>}
+              {Array.from(groupedByLang().entries()).map(([langName, entries]) => (
+                <div key={langName}>
+                  <div className="trans-lang-header">{langName}</div>
+                  {entries.map((r, i) => (
+                    <div key={i} className="trans-card">
+                      <div className="trans-pair">
+                        <span className="trans-source">{r.source}</span>
+                        <span className="trans-arrow">→</span>
+                        <span className="trans-target-word">{r.target}</span>
+                      </div>
+                      {r.meaning && <div className="trans-meaning">{r.meaning}</div>}
+                      {r.example && <div className="trans-example">&ldquo;{r.example}&rdquo;</div>}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>

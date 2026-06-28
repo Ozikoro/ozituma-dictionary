@@ -253,49 +253,10 @@ html.dark .hero h1 {
 }
 
 /* ───────── Translate ───────── */
-.translate-row {
+.translate-btn-row {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.75rem;
-  align-items: center;
-}
-
-.translate-picker {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0 0.75rem;
-  transition: border-color 0.2s;
-}
-
-.translate-picker:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-.translate-label {
-  font-size: 0.82rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-.translate-select {
-  flex: 1;
-  padding: 0.7rem 0;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-size: 0.9rem;
-  font-family: var(--font-sans);
-  outline: none;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
 }
 
 .translate-header {
@@ -309,6 +270,15 @@ html.dark .hero h1 {
 .trans-label-results {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.trans-lang-header {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  padding: 0.5rem 0 0.35rem;
 }
 
 .trans-card {
