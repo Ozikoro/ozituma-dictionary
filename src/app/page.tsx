@@ -39,7 +39,6 @@ export default function HomePage() {
         langCode: selectedLang || null,
       })
 
-      // Attach language info
       const langMap = new Map(languages.map((l) => [l.id, l]))
       const enriched = data.searchWords.map((w) => ({
         ...w,
@@ -49,12 +48,11 @@ export default function HomePage() {
 
       setResults(enriched)
 
-      // Fetch translations for each result (compare against all other languages)
+      // Fetch translations for each result
       if (enriched.length > 0) {
         const allCodes = languages.filter((l) => l.code !== enriched[0]?.langCode).map((l) => l.code)
         const tMap = new Map<string, Translation[]>()
 
-        // Limit to first 10 results to avoid hammering the API
         const batch = enriched.slice(0, 10)
         const tResults = await Promise.allSettled(
           batch.map((w) =>
@@ -79,12 +77,10 @@ export default function HomePage() {
     }
   }, [query, selectedLang, languages])
 
-  // Search on Enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch()
   }
 
-  // Group translations by target language
   const groupedTranslations = (wordId: string): Map<string, Translation[]> => {
     const tList = translations.get(wordId) || []
     const grouped = new Map<string, Translation[]>()
@@ -96,17 +92,16 @@ export default function HomePage() {
     return grouped
   }
 
-  const langByCode = (code: string) => languages.find((l) => l.code === code)
-
   return (
     <div className="container">
-      <header className="header">
+      <header className="hero">
         <h1>OziTuma Dictionary</h1>
         <p>Search and compare words across 18+ African indigenous languages</p>
       </header>
 
       <div className="search-section">
-        <div className="search-row">
+        <div className="search-wrapper">
+          <span className="search-icon">🔍</span>
           <input
             className="search-input"
             type="text"
@@ -116,27 +111,29 @@ export default function HomePage() {
             onKeyDown={handleKeyDown}
             autoFocus
           />
-          <button className="btn" onClick={handleSearch} disabled={searching || !query.trim()}>
+          <button className="search-btn" onClick={handleSearch} disabled={searching || !query.trim()}>
             {searching ? 'Searching…' : 'Search'}
           </button>
         </div>
+      </div>
 
-        {/* Language filter chips */}
+      <div className="lang-section">
+        <div className="lang-label">Filter by language</div>
         <div className="lang-chips">
-          <span
+          <button
             className={`lang-chip ${selectedLang === null ? 'active' : ''}`}
             onClick={() => setSelectedLang(null)}
           >
             All Languages
-          </span>
+          </button>
           {languages.map((lang) => (
-            <span
+            <button
               key={lang.code}
               className={`lang-chip ${selectedLang === lang.code ? 'active' : ''}`}
               onClick={() => setSelectedLang(selectedLang === lang.code ? null : lang.code)}
             >
               {lang.name}
-            </span>
+            </button>
           ))}
         </div>
       </div>
@@ -146,21 +143,22 @@ export default function HomePage() {
       {loading && (
         <div className="results">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton" />
+            <div key={i} className="skeleton" style={{ height: '4.5rem' }} />
           ))}
         </div>
       )}
 
       {!loading && !searching && results.length === 0 && !error && (
         <div className="no-results">
-          <p>Type a word above and press Search to find translations</p>
+          <div className="no-results-icon">📖</div>
+          <p>Type a word above and press <strong>Search</strong><br />to look up translations across African languages</p>
         </div>
       )}
 
       {searching && (
         <div className="results">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton" />
+            <div key={i} className="skeleton" style={{ height: '4.5rem' }} />
           ))}
         </div>
       )}
@@ -175,46 +173,30 @@ export default function HomePage() {
                 key={word.id}
                 href={`/word/${word.id}`}
                 className="word-card"
-                style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
               >
                 <div className="word-card-header">
                   <span className="word-text">{word.text}</span>
-                  <span className="word-language">
+                  <span className="word-lang-badge">
                     {word.langName || word.langCode}
                   </span>
                 </div>
 
                 {grouped.size > 0 && (
-                  <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                    {Array.from(grouped.entries()).slice(0, 5).map(([, tList]) => {
-                      const target = tList[0]
+                  <div className="translation-preview">
+                    {Array.from(grouped.entries()).slice(0, 4).map(([, tList]) => {
+                      const t = tList[0]
                       return (
-                        <div key={target.id} style={{ marginBottom: '0.25rem' }}>
-                          {target.meaning && <span> — {target.meaning}</span>}
+                        <div key={t.id} className="translation-preview-item">
+                          <span className="translation-preview-lang">↗ </span>
+                          {t.meaning || 'Translation available'}
                         </div>
                       )
                     })}
-                    {grouped.size > 5 && (
-                      <div style={{ marginTop: '0.25rem', color: 'var(--text-muted)' }}>
-                        +{grouped.size - 5} more translations
+                    {grouped.size > 4 && (
+                      <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                        +{grouped.size - 4} more translation{grouped.size - 4 > 1 ? 's' : ''}
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* Target language chips */}
-                {grouped.size > 0 && (
-                  <div className="lang-chips" style={{ marginTop: '0.5rem' }}>
-                    {Array.from(grouped.entries()).slice(0, 5).map(([, tList]) => {
-                      const t = tList[0]
-                      // Find the target word's language - we don't have it directly
-                      // but we got translations with target_word_id
-                      return (
-                        <span key={t.id} className="lang-chip">
-                          translation available
-                        </span>
-                      )
-                    })}
                   </div>
                 )}
               </a>
@@ -224,7 +206,7 @@ export default function HomePage() {
       )}
 
       <footer className="footer">
-        OziTuma Dictionary · {languages.length} African languages · {results.length > 0 ? `${results.length} results` : ''}
+        {languages.length} African languages · {results.length > 0 ? `${results.length} result${results.length > 1 ? 's' : ''}` : 'OziTuma Dictionary'}
       </footer>
     </div>
   )
