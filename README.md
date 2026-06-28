@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OziTuma Dictionary
 
-## Getting Started
+A multilingual dictionary for African indigenous languages. Search words and compare translations across **18 languages** including Yoruba, Hausa, Igbo, Swahili, Zulu, and more.
 
-First, run the development server:
+Built with **Next.js 16**, **TypeScript**, and a **Rust GraphQL backend**.
+
+## Features
+
+- **Search** — Type any word and search across all 18 languages
+- **Language filter** — Click a language chip to narrow results to a specific language
+- **Translation preview** — See meanings inline in search results
+- **Word detail** — Click a result to see all translations with meanings and usage examples
+- **Dark theme** — Clean, modern dark UI
+
+## Languages covered
+
+| Region | Languages |
+|--------|-----------|
+| 🇳🇬 Nigeria | Yoruba, Hausa, Igbo |
+| 🇰🇪 East Africa | Swahili, Luhya (Bukusu, Wanga, Luwanga) |
+| 🇿🇦 Southern Africa | Zulu, Xhosa, Swati, Ndebele, Tswana, N. Sotho, S. Sotho, Venda, Tsonga, Afrikaans |
+
+## Getting started
+
+### Prerequisites
+
+- **Node.js** 18+
+- **Backend** — The [dictionary-backend](https://github.com/Ozikoro/dictionary-backend) must be running on `http://127.0.0.1:3000`
+
+### Run the frontend
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Opens on **http://localhost:3001** by default.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Run both (backend + frontend)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Terminal 1 — Backend (from dictionary-backend repo)
+./target/debug/backend.exe
 
-## Learn More
+# Terminal 2 — Frontend
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+The frontend proxies GraphQL requests to the backend via `/api/graphql`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Build for production
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build
+npm start
+```
 
-## Deploy on Vercel
+## Project structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── layout.tsx         # Root layout with metadata
+│   ├── page.tsx           # Home / search page
+│   ├── word/[id]/page.tsx # Word detail page with translations
+│   └── globals.css        # Global styles (dark theme)
+└── lib/
+    ├── graphql.ts         # GraphQL client and queries
+    └── types.ts           # TypeScript interfaces
+```
