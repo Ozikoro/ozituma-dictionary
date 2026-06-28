@@ -9,6 +9,7 @@ import type { Language, Word, Translation } from '@/lib/types'
 interface TranslationWithMeta extends Translation {
   targetText?: string
   targetLanguageName?: string
+  targetLanguageCode?: string
 }
 
 export default function WordDetailPage() {
@@ -17,7 +18,9 @@ export default function WordDetailPage() {
 
   const [word, setWord] = useState<Word | null>(null)
   const [language, setLanguage] = useState<Language | null>(null)
-  const [translations, setTranslations] = useState<TranslationWithMeta[]>([])
+  const [allTranslations, setAllTranslations] = useState<TranslationWithMeta[]>([])
+  const [allLanguages, setAllLanguages] = useState<Language[]>([])
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,11 +31,10 @@ export default function WordDetailPage() {
       try {
         setLoading(true)
 
-        // 1. Fetch all languages
         const langData = await graphql<{ languages: Language[] }>(LANGUAGES_QUERY)
         const langMap = new Map(langData.languages.map((l) => [l.id, l]))
+        setAllLanguages(langData.languages)
 
-        // 2. Fetch the source word
         const wordData = await graphql<{ word: Word | null }>(WORD_QUERY, { id: wordId })
         if (!wordData.word) {
           setError('Word not found')
@@ -42,7 +44,6 @@ export default function WordDetailPage() {
         setWord(wordData.word)
         setLanguage(langMap.get(wordData.word.languageId) || null)
 
-        // 3. Fetch translations
         const allCodes = langData.languages
           .filter((l) => l.id !== wordData.word!.languageId)
           .map((l) => l.code)
@@ -52,10 +53,9 @@ export default function WordDetailPage() {
           targetLangs: allCodes.length > 0 ? allCodes : ['xx'],
         })
 
-        // 4. Fetch target word texts
         const targetWordIds = [...new Set(tData.compareWord.map((t) => t.targetWordId))]
         const tWordTexts = new Map<string, string>()
-        const tWordLangs = new Map<string, string>()
+        const tWordLangs = new Map<string, { name: string; code: string }>()
 
         await Promise.allSettled(
           targetWordIds.map(async (twId) => {
@@ -64,7 +64,7 @@ export default function WordDetailPage() {
               tWordTexts.set(twId, twData.word.text)
               const lang = langMap.get(twData.word.languageId)
               if (lang) {
-                tWordLangs.set(twId, `${lang.name} (${lang.code})`)
+                tWordLangs.set(twId, { name: lang.name, code: lang.code })
               }
             }
           })
@@ -73,10 +73,18 @@ export default function WordDetailPage() {
         const enriched = tData.compareWord.map((t) => ({
           ...t,
           targetText: tWordTexts.get(t.targetWordId) || undefined,
-          targetLanguageName: tWordLangs.get(t.targetWordId) || undefined,
+          targetLanguageName: tWordLangs.get(t.targetWordId)?.name || undefined,
+          targetLanguageCode: tWordLangs.get(t.targetWordId)?.code || undefined,
         }))
 
-        setTranslations(enriched)
+        setAllTranslations(enriched)
+
+        // Pre-select all languages that have translations
+        const codesWithTranslations = new Set(
+          enriched.map((t) => t.targetLanguageCode).filter(Boolean) as string[]
+        )
+        setSelectedCodes(codesWithTranslations)
+
         setError(null)
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to load word')
@@ -87,6 +95,32 @@ export default function WordDetailPage() {
 
     fetchData()
   }, [wordId])
+
+  // Get unique languages that have translations
+  const availableLangs = allLanguages.filter((l) =>
+    l.id !== word?.languageId &&
+    allTranslations.some((t) => t.targetLanguageCode === l.code)
+  )
+
+  // Filter translations by selected languages
+  const filtered = allTranslations.filter((t) => selectedCodes.has(t.targetLanguageCode || ''))
+
+  const toggleLang = (code: string) => {
+    setSelectedCodes((prev) => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    setSelectedCodes(new Set(availableLangs.map((l) => l.code)))
+  }
+
+  const selectNone = () => {
+    setSelectedCodes(new Set())
+  }
 
   if (loading) {
     return (
@@ -127,20 +161,46 @@ export default function WordDetailPage() {
         )}
       </div>
 
-      {translations.length > 0 && (
-        <div className="detail-count">
-          {translations.length} translation{translations.length !== 1 ? 's' : ''}
+      {/* ── Multi-language picker ── */}
+      {availableLangs.length > 0 && (
+        <div className="lang-section">
+          <div className="lang-label">
+            Languages
+            <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+              {' · '}
+              <button className="picker-btn" onClick={selectAll}>All</button>
+              {' / '}
+              <button className="picker-btn" onClick={selectNone}>None</button>
+              {' · '} {filtered.length} of {allTranslations.length} translations
+            </span>
+          </div>
+          <div className="lang-chips">
+            {availableLangs.map((lang) => (
+              <button
+                key={lang.code}
+                className={`lang-chip ${selectedCodes.has(lang.code) ? 'active' : ''}`}
+                onClick={() => toggleLang(lang.code)}
+              >
+                {lang.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {translations.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="no-results">
           <div className="no-results-icon">🔍</div>
-          <p>No translations found for this word.</p>
+          <p>No translations match your language selection.</p>
+          {availableLangs.length > 0 && (
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+              Try selecting a language above
+            </p>
+          )}
         </div>
       ) : (
         <div className="translations-list">
-          {translations.map((t, idx) => (
+          {filtered.map((t, idx) => (
             <div key={`${t.id}-${idx}`} className="translation-item">
               <div className="translation-target-word">{t.targetText || 'Word'}</div>
               {t.targetLanguageName && (

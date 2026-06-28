@@ -198,6 +198,180 @@ html.dark .hero h1 {
 .search-btn:active { transform: translateY(0); }
 .search-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
 
+/* ───────── Tabs ───────── */
+.tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.tab {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.tab:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: var(--border);
+}
+
+.tab:hover { color: var(--text-muted); }
+
+.tab.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tab.active::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+}
+
+/* ───────── Translate ───────── */
+.translate-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+
+.translate-picker {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 0.75rem;
+  transition: border-color 0.2s;
+}
+
+.translate-picker:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.translate-label {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.translate-select {
+  flex: 1;
+  padding: 0.7rem 0;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.translate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.trans-label-results {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.trans-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.trans-pair {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.trans-source {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.trans-arrow {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.trans-target-word {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.trans-meaning {
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+.trans-example {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-top: 0.4rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+}
+
+/* ───────── Language Picker Buttons ───────── */
+.picker-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.picker-btn:hover { color: var(--accent-hover); }
+
 /* ───────── Language Chips ───────── */
 .lang-section {
   padding: 0 1rem;
