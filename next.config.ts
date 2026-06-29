@@ -1,14 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/graphql",
-        destination: "http://127.0.0.1:3000/graphql",
-      },
-    ];
-  },
+  output: 'export',
+  // Configure basePath if hosting in a subfolder, e.g. basePath: '/dictionary'
 };
 
 export default nextConfig;

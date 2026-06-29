@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { graphql, LANGUAGES_QUERY, WORD_QUERY, COMPARE_WORD_QUERY } from '@/lib/graphql'
 import type { Language, Word, Translation } from '@/lib/types'
@@ -12,9 +12,9 @@ interface TranslationWithMeta extends Translation {
   targetLanguageCode?: string
 }
 
-export default function WordDetailPage() {
-  const params = useParams()
-  const wordId = params.id as string
+function WordDetailContent() {
+  const searchParams = useSearchParams()
+  const wordId = searchParams.get('id') as string
 
   const [word, setWord] = useState<Word | null>(null)
   const [language, setLanguage] = useState<Language | null>(null)
@@ -226,5 +226,13 @@ export default function WordDetailPage() {
         </Link>
       </footer>
     </div>
+  )
+}
+
+export default function WordDetailPage() {
+  return (
+    <Suspense fallback={<div className="container">Loading...</div>}>
+      <WordDetailContent />
+    </Suspense>
   )
 }

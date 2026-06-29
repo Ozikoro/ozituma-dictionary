@@ -1,0 +1,157 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  backend "s3" {
+    bucket  = "ozituma-dictionary-tf-state-william"
+    key     = "frontend/terraform.tfstate"
+    region  = "af-south-1"
+    profile = "ozituma-william"
+  }
+}
+
+provider "aws" {
+  region  = "af-south-1"
+  profile = "ozituma-william"
+}
+
+provider "aws" {
+  alias   = "us_east_1"
+  region  = "us-east-1"
+  profile = "ozituma-william"
+}
+
+resource "aws_acm_certificate" "frontend_cert" {
+  provider          = aws.us_east_1
+  domain_name       = "ozituma.witra.site"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_acm_certificate_validation" "frontend_cert_validation" {
+  provider                = aws.us_east_1
+  certificate_arn         = aws_acm_certificate.frontend_cert.arn
+  # We will manually handle DNS records outside of Terraform
+}
+
+output "acm_validation_records" {
+  value = {
+    for dvo in aws_acm_certificate.frontend_cert.domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  }
+}
+
+resource "aws_s3_bucket" "frontend" {
+  bucket = "ozituma-dictionary-frontend-william"
+}
+
+resource "aws_s3_bucket_public_access_block" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_website_configuration" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "404.html"
+  }
+}
+
+resource "aws_s3_bucket_policy" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
+      },
+    ]
+  })
+  
+  depends_on = [aws_s3_bucket_public_access_block.frontend]
+}
+
+output "website_url" {
+  value = aws_s3_bucket_website_configuration.frontend.website_endpoint
+}
+
+locals {
+  s3_origin_id = "myS3Origin"
+}
+
+resource "aws_cloudfront_distribution" "frontend" {
+  aliases = ["ozituma.witra.site"]
+
+  origin {
+    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    origin_id   = local.s3_origin_id
+    
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+
+  default_cache_behavior {
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = local.s3_origin_id
+
+    forwarded_values {
+      query_string = true
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate_validation.frontend_cert_validation.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+}
+
+output "cloudfront_url" {
+  value = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}

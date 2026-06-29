@@ -36,8 +36,8 @@ export default function HomePage() {
     graphql<{ languages: Language[] }>(LANGUAGES_QUERY)
       .then((data) => {
         setLanguages(data.languages)
-        // Default: select all non-English languages
-        setTransTargets(new Set(data.languages.filter((l) => l.code !== 'en').map((l) => l.code)))
+        // Default: start with no languages selected
+        setTransTargets(new Set())
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
@@ -290,7 +290,7 @@ export default function HomePage() {
               {results.map((word) => {
                 const grouped = groupedTranslations(word.id)
                 return (
-                  <Link key={word.id} href={`/word/${word.id}`} className="word-card">
+                  <Link key={word.id} href={`/word?id=${word.id}`} className="word-card">
                     <div className="word-card-header">
                       <span className="word-text">{word.text}</span>
                       <span className="word-lang-badge">{word.langName || word.langCode}</span>

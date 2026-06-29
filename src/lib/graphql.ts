@@ -1,4 +1,4 @@
-const API_URL = '/api/graphql'
+const API_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || '/api/graphql'
 
 export async function graphql<T>(
   query: string,
