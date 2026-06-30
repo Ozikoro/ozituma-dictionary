@@ -1,59 +1,41 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { graphql, LANGUAGES_QUERY, SEARCH_WORDS_QUERY, COMPARE_WORD_QUERY, WORD_QUERY, WORDS_QUERY } from '@/lib/graphql'
 import type { Language, Word, Translation } from '@/lib/types'
+import { useSearchStore, TransResult } from '@/store/useSearchStore'
 
-type Tab = 'search' | 'translate' | 'browse'
+const PAGE_SIZE = 50
 
 export default function HomePage() {
-  const [languages, setLanguages] = useState<Language[]>([])
-  const [tab, setTab] = useState<Tab>('search')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // ── Search state ──
-  const [query, setQuery] = useState('')
-  const [selectedLang, setSelectedLang] = useState<string | null>(null)
-  const [results, setResults] = useState<WordWithLang[]>([])
-  const [translations, setTranslations] = useState<Map<string, Translation[]>>(new Map())
-  const [searching, setSearching] = useState(false)
-
-  // ── Translate state ──
-  const [transWord, setTransWord] = useState('')
-  const [transTargets, setTransTargets] = useState<Set<string>>(new Set())
-  const [transResults, setTransResults] = useState<TransResult[]>([])
-  const [translating, setTranslating] = useState(false)
-
-  // ── Browse state ──
-  const [browseLang, setBrowseLang] = useState('')
-  const [browseWords, setBrowseWords] = useState<Word[]>([])
-  const [browseTotal, setBrowseTotal] = useState(0)
-  const [browsePage, setBrowsePage] = useState(0)
-  const [browseLoading, setBrowseLoading] = useState(false)
-  const PAGE_SIZE = 50
-
-  type WordWithLang = Word & { langName?: string; langCode?: string }
-  type TransResult = { source: string; target: string; lang: string; meaning?: string; example?: string }
+  const {
+    languages, setLanguages, tab, setTab, loading, setLoading, error, setError,
+    hasLoadedLangs, setHasLoadedLangs,
+    query, setQuery, selectedLang, setSelectedLang, results, setResults, translations, setTranslations, searching, setSearching,
+    transWord, setTransWord, transTargets, setTransTargets, transResults, setTransResults, translating, setTranslating,
+    browseLang, setBrowseLang, browseWords, setBrowseWords, browseTotal, setBrowseTotal, browsePage, setBrowsePage, browseLoading, setBrowseLoading
+  } = useSearchStore()
 
   const nonEnglishLangs = languages.filter((l) => l.code !== 'en')
 
   // Load languages on mount
   useEffect(() => {
+    if (hasLoadedLangs) return
     graphql<{ languages: Language[] }>(LANGUAGES_QUERY)
       .then((data) => {
         setLanguages(data.languages)
         // Default: start with no languages selected
         setTransTargets(new Set())
+        setHasLoadedLangs(true)
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [hasLoadedLangs, setLanguages, setTransTargets, setHasLoadedLangs, setError, setLoading])
 
   // ── Browse: load words when language changes ──
   useEffect(() => {
-    if (!browseLang) return
+    if (!browseLang || browseWords.length > 0) return
     setBrowseLoading(true)
     graphql<{ words: Word[]; wordCount: number }>(WORDS_QUERY, {
       langCode: browseLang, offset: 0, limit: PAGE_SIZE
@@ -61,9 +43,8 @@ export default function HomePage() {
       setBrowseWords(data.words)
       setBrowseTotal(data.wordCount)
     }).catch(() => {}).finally(() => setBrowseLoading(false))
-  }, [browseLang])
+  }, [browseLang, browseWords.length, setBrowseLoading, setBrowseWords, setBrowseTotal])
 
-  const langMap = new Map(languages.map((l) => [l.code, l]))
   const langMapById = new Map(languages.map((l) => [l.id, l]))
 
   // ── Search handler ──
@@ -116,7 +97,7 @@ export default function HomePage() {
     } finally {
       setSearching(false)
     }
-  }, [query, selectedLang, languages])
+  }, [query, selectedLang, languages, setSearching, setError, setTranslations, setResults])
 
   // ── Translate handler ──
   const handleTranslate = useCallback(async () => {
@@ -185,15 +166,13 @@ export default function HomePage() {
     } finally {
       setTranslating(false)
     }
-  }, [transWord, transTargets, languages])
+  }, [transWord, transTargets, langMapById, setTranslating, setError, setTransResults])
 
   const toggleTransLang = (code: string) => {
-    setTransTargets((prev) => {
-      const next = new Set(prev)
-      if (next.has(code)) next.delete(code)
-      else next.add(code)
-      return next
-    })
+    const next = new Set(transTargets)
+    if (next.has(code)) next.delete(code)
+    else next.add(code)
+    setTransTargets(next)
   }
 
   const selectAllLangs = () => {
@@ -417,7 +396,7 @@ export default function HomePage() {
                 <div key={langName}>
                   <div className="trans-lang-header">{langName}</div>
                   {entries.map((r, i) => (
-                    <div key={i} className="trans-card">
+                     <div key={i} className="trans-card">
                       <div className="trans-pair">
                         <span className="trans-source">{r.source}</span>
                         <span className="trans-arrow">→</span>
