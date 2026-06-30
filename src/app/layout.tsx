@@ -9,9 +9,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ozituma.com"),
   title: "OziTuma Dictionary",
   description:
     "A multilingual dictionary for African indigenous languages — search words and compare translations across 18+ languages.",
+  openGraph: {
+    title: "OziTuma Dictionary",
+    description: "A multilingual dictionary for African indigenous languages — search words and compare translations across 18+ languages.",
+    url: "https://ozituma.com",
+    siteName: "OziTuma Dictionary",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "OziTuma Dictionary Preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OziTuma Dictionary",
+    description: "A multilingual dictionary for African indigenous languages — search words and compare translations across 18+ languages.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
