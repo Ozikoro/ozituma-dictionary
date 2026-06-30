@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { graphql, LANGUAGES_QUERY, SEARCH_WORDS_QUERY, COMPARE_WORD_QUERY, WORD_QUERY } from '@/lib/graphql'
+import { graphql, LANGUAGES_QUERY, SEARCH_WORDS_QUERY, COMPARE_WORD_QUERY, WORD_QUERY, WORDS_QUERY } from '@/lib/graphql'
 import type { Language, Word, Translation } from '@/lib/types'
 
-type Tab = 'search' | 'translate'
+type Tab = 'search' | 'translate' | 'browse'
 
 export default function HomePage() {
   const [languages, setLanguages] = useState<Language[]>([])
@@ -26,6 +26,14 @@ export default function HomePage() {
   const [transResults, setTransResults] = useState<TransResult[]>([])
   const [translating, setTranslating] = useState(false)
 
+  // ── Browse state ──
+  const [browseLang, setBrowseLang] = useState('')
+  const [browseWords, setBrowseWords] = useState<Word[]>([])
+  const [browseTotal, setBrowseTotal] = useState(0)
+  const [browsePage, setBrowsePage] = useState(0)
+  const [browseLoading, setBrowseLoading] = useState(false)
+  const PAGE_SIZE = 50
+
   type WordWithLang = Word & { langName?: string; langCode?: string }
   type TransResult = { source: string; target: string; lang: string; meaning?: string; example?: string }
 
@@ -42,6 +50,18 @@ export default function HomePage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
+
+  // ── Browse: load words when language changes ──
+  useEffect(() => {
+    if (!browseLang) return
+    setBrowseLoading(true)
+    graphql<{ words: Word[]; wordCount: number }>(WORDS_QUERY, {
+      langCode: browseLang, offset: 0, limit: PAGE_SIZE
+    }).then((data) => {
+      setBrowseWords(data.words)
+      setBrowseTotal(data.wordCount)
+    }).catch(() => {}).finally(() => setBrowseLoading(false))
+  }, [browseLang])
 
   const langMap = new Map(languages.map((l) => [l.code, l]))
   const langMapById = new Map(languages.map((l) => [l.id, l]))
@@ -219,6 +239,9 @@ export default function HomePage() {
         </button>
         <button className={`tab ${tab === 'translate' ? 'active' : ''}`} onClick={() => setTab('translate')}>
           🌐 Translate
+        </button>
+        <button className={`tab ${tab === 'browse' ? 'active' : ''}`} onClick={() => setTab('browse')}>
+          📖 Browse
         </button>
       </div>
 
@@ -407,6 +430,97 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+          )}
+        </>
+      )}
+
+      {/* ── BROWSE TAB ── */}
+      {tab === 'browse' && (
+        <>
+          <div className="lang-section">
+            <div className="lang-label">Dictionary</div>
+            <select
+              className="browse-select"
+              value={browseLang}
+              onChange={(e) => {
+                setBrowseLang(e.target.value)
+                setBrowsePage(0)
+                setBrowseWords([])
+                setBrowseTotal(0)
+              }}
+            >
+              <option value="">Select a language…</option>
+              {languages.map((l) => (
+                <option key={l.code} value={l.code}>{l.name} ({l.code})</option>
+              ))}
+            </select>
+          </div>
+
+          {browseLang && browseLoading && (
+            <div className="results">
+              {[1,2,3].map((i) => <div key={i} className="skeleton" style={{ height: '3rem' }} />)}
+            </div>
+          )}
+
+          {browseLang && !browseLoading && browseWords.length === 0 && (
+            <div className="no-results">
+              <div className="no-results-icon">📖</div>
+              <p>Select a language above to browse its dictionary.</p>
+            </div>
+          )}
+
+          {browseLang && (
+            <>
+              <div style={{ padding: '0 1rem', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {browseTotal > 0 ? `${browseTotal} words` : ''}
+                </span>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    className="pagination-btn"
+                    disabled={browsePage === 0}
+                    onClick={async () => {
+                      const pg = browsePage - 1
+                      setBrowsePage(pg)
+                      setBrowseLoading(true)
+                      const data = await graphql<{ words: Word[]; wordCount: number }>(WORDS_QUERY, {
+                        langCode: browseLang, offset: pg * PAGE_SIZE, limit: PAGE_SIZE
+                      })
+                      setBrowseWords(data.words)
+                      setBrowseTotal(data.wordCount)
+                      setBrowseLoading(false)
+                    }}
+                  >← Prev</button>
+                  <button
+                    className="pagination-btn"
+                    disabled={(browsePage + 1) * PAGE_SIZE >= browseTotal}
+                    onClick={async () => {
+                      const pg = browsePage + 1
+                      setBrowsePage(pg)
+                      setBrowseLoading(true)
+                      const data = await graphql<{ words: Word[]; wordCount: number }>(WORDS_QUERY, {
+                        langCode: browseLang, offset: pg * PAGE_SIZE, limit: PAGE_SIZE
+                      })
+                      setBrowseWords(data.words)
+                      setBrowseTotal(data.wordCount)
+                      setBrowseLoading(false)
+                    }}
+                  >Next →</button>
+                </div>
+              </div>
+
+              {!browseLoading && (
+                <div className="results">
+                  {browseWords.map((w) => (
+                    <Link key={w.id} href={`/word/${w.id}`} className="word-card" style={{ padding: '0.75rem 1rem' }}>
+                      <div className="word-card-header">
+                        <span className="word-text" style={{ fontSize: '0.95rem' }}>{w.text}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}

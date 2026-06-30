@@ -53,6 +53,16 @@ export const WORD_QUERY = `
   }
 `
 
+export const WORDS_QUERY = `
+  query Words($langCode: String!, $offset: Int, $limit: Int) {
+    words(langCode: $langCode, offset: $offset, limit: $limit) {
+      id
+      text
+    }
+    wordCount(langCode: $langCode)
+  }
+`
+
 export const COMPARE_WORD_QUERY = `
   query CompareWord($wordId: UUID!, $targetLangs: [String!]!) {
     compareWord(wordId: $wordId, targetLangs: $targetLangs) {
