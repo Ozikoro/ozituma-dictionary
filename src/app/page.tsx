@@ -512,7 +512,7 @@ export default function HomePage() {
               {!browseLoading && (
                 <div className="results">
                   {browseWords.map((w) => (
-                    <Link key={w.id} href={`/word/${w.id}`} className="word-card" style={{ padding: '0.75rem 1rem' }}>
+                    <Link key={w.id} href={`/word?id=${w.id}`} className="word-card" style={{ padding: '0.75rem 1rem' }}>
                       <div className="word-card-header">
                         <span className="word-text" style={{ fontSize: '0.95rem' }}>{w.text}</span>
                       </div>
