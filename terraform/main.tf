@@ -7,15 +7,15 @@ terraform {
   }
 
   backend "s3" {
-    bucket  = "ozituma-dictionary-tf-state-william"
+    bucket  = "ozituma-dictionary-frontend-tf-state-william-eu"
     key     = "frontend/terraform.tfstate"
-    region  = "af-south-1"
+    region  = "eu-west-3"
     profile = "ozituma-william"
   }
 }
 
 provider "aws" {
-  region  = "af-south-1"
+  region  = "eu-west-3"
   profile = "ozituma-william"
 }
 
@@ -27,7 +27,7 @@ provider "aws" {
 
 resource "aws_acm_certificate" "frontend_cert" {
   provider          = aws.us_east_1
-  domain_name       = "ozituma.witra.site"
+  domain_name       = "dictionary.ozituma.com"
   validation_method = "DNS"
 
   lifecycle {
@@ -52,7 +52,8 @@ output "acm_validation_records" {
 }
 
 resource "aws_s3_bucket" "frontend" {
-  bucket = "ozituma-dictionary-frontend-william"
+  bucket        = "ozituma-dictionary-frontend-william-eu"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
@@ -103,7 +104,7 @@ locals {
 }
 
 resource "aws_cloudfront_distribution" "frontend" {
-  aliases = ["ozituma.witra.site"]
+  aliases = ["dictionary.ozituma.com"]
 
   origin {
     domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
