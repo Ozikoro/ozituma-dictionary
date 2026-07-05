@@ -1,9 +1,29 @@
 const API_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || '/api/graphql'
 
+const CACHE_KEY = 'ozituma_languages_cache'
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000 // 24 hours
+
 export async function graphql<T>(
   query: string,
   variables?: Record<string, unknown>
 ): Promise<T> {
+  // Check if this is the languages query and we are on the client side
+  const isLanguagesQuery = query.includes('query Languages {')
+  
+  if (isLanguagesQuery && typeof window !== 'undefined') {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached)
+        if (Date.now() - parsed.timestamp < CACHE_EXPIRY) {
+          return parsed.data as T
+        }
+      } catch (e) {
+        // Ignore parsing errors and proceed to fetch
+      }
+    }
+  }
+
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -18,6 +38,14 @@ export async function graphql<T>(
   const json = await res.json()
   if (json.errors) {
     throw new Error(json.errors[0]?.message || 'GraphQL error')
+  }
+
+  // Cache the result for the languages query
+  if (isLanguagesQuery && typeof window !== 'undefined') {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      data: json.data,
+    }))
   }
 
   return json.data as T

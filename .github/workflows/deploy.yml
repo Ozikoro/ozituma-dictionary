@@ -25,18 +25,18 @@ jobs:
       - name: Build static export
         run: npm run build
         env:
-          NEXT_PUBLIC_GRAPHQL_URL: https://f2z4dbmvcl6ir2ztd2ruszjsay0kdvay.lambda-url.af-south-1.on.aws/graphql
+          NEXT_PUBLIC_GRAPHQL_URL: https://cubirqcgx3wyrt36mxh7rfesru0sfjiq.lambda-url.eu-west-3.on.aws/graphql
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: af-south-1
+          aws-region: eu-west-3
 
       - name: Sync to S3
         run: |
-          aws s3 sync out/ s3://ozituma-dictionary-frontend-william --region af-south-1 --delete
+          aws s3 sync out/ s3://ozituma-dictionary-frontend-william-eu --region eu-west-3 --delete
 
       - name: Invalidate CloudFront cache
         run: |
