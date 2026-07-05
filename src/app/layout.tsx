@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: "OziTuma Dictionary",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "OziTuma Dictionary Preview",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "OziTuma Dictionary",
     description: "A multilingual dictionary for African indigenous languages — search words and compare translations across 18+ languages.",
-    images: ["/og-image.png"],
+    images: ["/og-image.jpg"],
   },
 };
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { graphql, LANGUAGES_QUERY, SEARCH_WORDS_QUERY, COMPARE_WORD_QUERY, WORD_QUERY, WORDS_QUERY } from '@/lib/graphql'
 import type { Language, Word, Translation } from '@/lib/types'
 import { useSearchStore, TransResult } from '@/store/useSearchStore'
@@ -207,6 +208,7 @@ export default function HomePage() {
   return (
     <div className="container">
       <header className="hero">
+        <Image src="/logo.jpg" alt="OziTuma Dictionary Logo" width={80} height={80} className="site-logo" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <h1>OziTuma Dictionary</h1>
         <p>Search and compare words across 18+ African indigenous languages</p>
       </header>
