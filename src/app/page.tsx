@@ -36,7 +36,7 @@ export default function HomePage() {
 
   // ── Browse: load words when language changes ──
   useEffect(() => {
-    if (!browseLang || browseWords.length > 0) return
+    if (!browseLang || browseWords.length > 0 || browseTotal >= 0) return
     setBrowseLoading(true)
     graphql<{ words: Word[]; wordCount: number }>(WORDS_QUERY, {
       langCode: browseLang, offset: 0, limit: PAGE_SIZE
@@ -44,7 +44,7 @@ export default function HomePage() {
       setBrowseWords(data.words)
       setBrowseTotal(data.wordCount)
     }).catch(() => {}).finally(() => setBrowseLoading(false))
-  }, [browseLang, browseWords.length, setBrowseLoading, setBrowseWords, setBrowseTotal])
+  }, [browseLang, browseWords.length, browseTotal, setBrowseLoading, setBrowseWords, setBrowseTotal])
 
   const langMapById = new Map(languages.map((l) => [l.id, l]))
 
@@ -427,11 +427,11 @@ export default function HomePage() {
                 setBrowseLang(e.target.value)
                 setBrowsePage(0)
                 setBrowseWords([])
-                setBrowseTotal(0)
+                setBrowseTotal(-1)
               }}
             >
               <option value="">Select a language…</option>
-              {languages.map((l) => (
+              {nonEnglishLangs.map((l) => (
                 <option key={l.code} value={l.code}>{l.name} ({l.code})</option>
               ))}
             </select>

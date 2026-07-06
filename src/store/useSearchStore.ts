@@ -85,7 +85,7 @@ export const useSearchStore = create<SearchState>((set) => ({
   setBrowseLang: (browseLang) => set({ browseLang }),
   browseWords: [],
   setBrowseWords: (browseWords) => set({ browseWords }),
-  browseTotal: 0,
+  browseTotal: -1,
   setBrowseTotal: (browseTotal) => set({ browseTotal }),
   browsePage: 0,
   setBrowsePage: (browsePage) => set({ browsePage }),
