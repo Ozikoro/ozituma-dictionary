@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { graphql, LANGUAGES_QUERY, WORD_QUERY, COMPARE_WORD_QUERY } from '@/lib/graphql'
 import type { Language, Word, Translation } from '@/lib/types'
+import Loader from '@/components/Loader'
 
 interface TranslationWithMeta extends Translation {
   targetText?: string
@@ -125,14 +126,7 @@ function WordDetailContent() {
   if (loading) {
     return (
       <div className="container">
-        <div style={{ padding: '0 1rem' }}>
-          <div className="skeleton" style={{ height: '1.3rem', width: '8rem', marginBottom: '2rem' }} />
-          <div className="skeleton" style={{ height: '2.5rem', width: '16rem', marginBottom: '0.5rem' }} />
-          <div className="skeleton" style={{ height: '1.2rem', width: '10rem', marginBottom: '2rem' }} />
-          <div className="skeleton" style={{ height: '5rem', marginBottom: '0.5rem' }} />
-          <div className="skeleton" style={{ height: '5rem', marginBottom: '0.5rem' }} />
-          <div className="skeleton" style={{ height: '5rem' }} />
-        </div>
+        <Loader type="detail-skeleton" count={3} />
       </div>
     )
   }
@@ -231,7 +225,7 @@ function WordDetailContent() {
 
 export default function WordDetailPage() {
   return (
-    <Suspense fallback={<div className="container">Loading...</div>}>
+    <Suspense fallback={<div className="container" style={{ paddingTop: '4rem' }}><Loader type="spinner" /></div>}>
       <WordDetailContent />
     </Suspense>
   )

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { graphql, LANGUAGES_QUERY, SEARCH_WORDS_QUERY, COMPARE_WORD_QUERY, WORD_QUERY, WORDS_QUERY } from '@/lib/graphql'
 import type { Language, Word, Translation } from '@/lib/types'
 import { useSearchStore, TransResult } from '@/store/useSearchStore'
+import Loader from '@/components/Loader'
 
 const PAGE_SIZE = 50
 
@@ -270,11 +271,7 @@ export default function HomePage() {
 
           {error && <div className="error-banner">{error}</div>}
 
-          {loading && (
-            <div className="results">
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '4.5rem' }} />)}
-            </div>
-          )}
+          {loading && <Loader type="card-skeleton" count={3} />}
 
           {!loading && !searching && results.length === 0 && !error && (
             <div className="no-results">
@@ -283,11 +280,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {searching && (
-            <div className="results">
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '4.5rem' }} />)}
-            </div>
-          )}
+          {searching && <Loader type="card-skeleton" count={3} />}
 
           {results.length > 0 && !searching && (
             <div className="results">
@@ -374,11 +367,7 @@ export default function HomePage() {
 
           {error && <div className="error-banner">{error}</div>}
 
-          {translating && (
-            <div className="results">
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: '4.5rem' }} />)}
-            </div>
-          )}
+          {translating && <Loader type="card-skeleton" count={3} />}
 
           {!translating && transResults.length === 0 && !error && (
             <div className="no-results">
@@ -437,11 +426,7 @@ export default function HomePage() {
             </select>
           </div>
 
-          {browseLang && browseLoading && (
-            <div className="results">
-              {[1,2,3].map((i) => <div key={i} className="skeleton" style={{ height: '3rem' }} />)}
-            </div>
-          )}
+          {browseLang && browseLoading && <Loader type="card-skeleton" count={3} />}
 
           {browseLang && !browseLoading && browseWords.length === 0 && (
             <div className="no-results">
